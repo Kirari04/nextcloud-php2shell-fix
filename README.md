@@ -2,7 +2,15 @@
 
 Temporary drop-in replacement for **Nextcloud 34.0.4 (34.0.4.1), Apache, linux/amd64**, rebuilding PHP **8.5.10 → 8.5.12** to fix **CVE-2026-109618 and CVE-2026-109619**. Builds and publication run in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions).
 
-**Status: validation in progress; no published image is recommended yet.**
+**Published publicly and verified on 21 October 2026.** No registry login is required.
+
+```text
+ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:82e049f237314ac4d7b974e800059a729c9fb81d0ff3a8b315ce71518658c36c
+```
+
+Readable tag: `ghcr.io/kirari04/nextcloud-php2shell-fix:34.0.4-php8.5.12`.
+
+[Successful GitHub Actions build and publication](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163), built from commit `06de0d98157f4118886f2b788802b8508fb2ce9f`: **180 upstream regressions passed, zero failures and zero skips**. Apache security/session tests and the official → patched → official persistence roundtrip passed. Configuration and database schema hashes stayed identical; login sessions and files written under the patched image survived the return. Both the authenticated registry roundtrip and credential-free pull passed.
 
 ## What stays the same
 
@@ -21,7 +29,7 @@ No application or database upgrade is intended or required. The PHP fixes add up
 
 ## Switch to the replacement
 
-After a successful publication, use the immutable `ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:…` reference shown in the workflow summary and `published-image.txt` artifact. The readable release tag is `34.0.4-php8.5.12`; revision tags also include the source commit.
+Use the immutable image reference above. It is also recorded in the workflow summary and `published-image.txt` artifact. The readable release tag is `34.0.4-php8.5.12`; revision tags also include the source commit.
 
 1. In the existing Compose/Portainer stack, change **only the `nextcloud` service's `image:`** to the published digest. Keep every existing environment variable, mount, dependency, network and healthcheck.
 2. Recreate only that service. With Compose, from the directory containing the actual stack definition:
@@ -55,6 +63,8 @@ bash scripts/check-official.sh nextcloud:34.0.4-apache
 The script pulls the candidate, checks its Nextcloud version without running the Nextcloud entrypoint, starts an isolated Apache probe, verifies the web PHP version, then prints its immutable official digest. It fails if the application version differs or PHP is unpatched. Use that digest in the same `image:` field and repeat the two Compose commands above. Reuse the same configuration, database and volumes.
 
 **Do not blindly switch to `nextcloud:stable`.** At preparation time it already points to 34.0.5. Its entrypoint would upgrade a 34.0.4 installation. If upstream only publishes a patched image containing a newer Nextcloud version, returning to it is a separate Nextcloud upgrade; a migration-free return to that newer image cannot be promised. Keep this replacement until a matching official image exists, or plan that upgrade separately.
+
+The official `34.0.4-apache` tag was checked on 21 October 2026 and still contained PHP 8.5.11. The return-check script correctly rejected it.
 
 The isolated compatibility test switches back to the original 34.0.4 image solely to establish data/configuration compatibility. That old image still contains vulnerable PHP and is **not** a security-safe production rollback target.
 
