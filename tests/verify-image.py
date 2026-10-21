@@ -322,7 +322,7 @@ def persistence(candidate, lab, mysql):
         token = re.search(r'data-requesttoken="([^"]+)"', page.decode())
         require(status == 200 and token is not None, 'Login page/token unavailable')
         data = urllib.parse.urlencode({'user': 'testadmin', 'password': lab.password, 'requesttoken': html.unescape(token.group(1))}).encode()
-        http(url + '/login', data=data, opener=session_opener)
+        http(url + '/login', data=data, opener=session_opener, headers={'Origin': url, 'Referer': url + '/login'})
         status, response, _ = http(url + '/ocs/v2.php/cloud/user?format=json', opener=session_opener, headers={'OCS-APIRequest': 'true'})
         require(status == 200 and json.loads(response)['ocs']['data']['id'] == 'testadmin', 'Form login failed')
         dav = url + '/remote.php/dav/files/testadmin/'
