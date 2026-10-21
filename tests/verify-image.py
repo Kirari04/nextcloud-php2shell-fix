@@ -4,7 +4,7 @@ import argparse
 import base64
 import hashlib
 import html
-import http.cookiejar
+from http.cookiejar import CookieJar
 import json
 import os
 from pathlib import Path
@@ -189,6 +189,7 @@ def apache_security(candidate, lab, inventory):
         target.write_bytes((ROOT / 'tests/runtime.php').read_bytes())
     config = lab.evidence / 'apache-test.conf'
     config.write_text('''ServerName localhost
+LogLevel info
 StartServers 1
 MinSpareServers 1
 MaxSpareServers 1
@@ -196,6 +197,8 @@ MaxRequestWorkers 1
 MaxConnectionsPerChild 0
 php_admin_value error_log /proc/self/fd/2
 php_admin_flag log_errors On
+php_admin_flag display_errors Off
+php_admin_value error_reporting 32767
 php_value session.save_handler redis
 php_value session.save_path tcp://redis:6379
 <Directory /var/www/html/early>
@@ -207,10 +210,15 @@ php_value session.save_path tcp://redis:6379
 ''')
     for path in [fixtures, fixtures / 'early', fixtures / 'oom']:
         path.chmod(0o755)
+    # Startup defaults also govern diagnostics emitted before request INI
+    # activation, which is the second vulnerability's entry point.
+    startup_ini = lab.evidence / 'security-test.ini'
+    startup_ini.write_text('error_reporting=E_ALL\nlog_errors=On\ndisplay_errors=Off\nerror_log=/proc/self/fd/2\n')
     container = lab.run('http', candidate, env={'PHP_MEMORY_LIMIT': '1G', 'PHP_UPLOAD_LIMIT': '50G', 'APACHE_BODY_LIMIT': '53687091200'},
                         options=['--memory', '512m', '--pids-limit', '128', '-p', '127.0.0.1::80',
                                  '--entrypoint', 'apache2-foreground', '-v', f'{fixtures}:/var/www/html:ro',
-                                 '-v', f'{config}:/etc/apache2/conf-enabled/zzz-test.conf:ro'])
+                                 '-v', f'{config}:/etc/apache2/conf-enabled/zzz-test.conf:ro',
+                                 '-v', f'{startup_ini}:/usr/local/etc/php/conf.d/zzz-security-test.ini:ro'])
     url = lab.url(container)
     wait_for(lambda: http(url)[0] == 200)
     details = json.loads(http(url)[1])
@@ -220,7 +228,7 @@ php_value session.save_path tcp://redis:6379
     require(details['memory_limit'] == '1G' and details['upload_max_filesize'] == details['post_max_size'] == '50G', 'Production PHP settings not honored')
     require(details['session_handler'] == 'redis' and details['session_serializer'] == 'igbinary', 'Wrong production session configuration')
     (lab.evidence / 'apache-runtime.json').write_text(json.dumps(details, indent=2) + '\n')
-    jar = http.cookiejar.CookieJar()
+    jar = CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
     sentinel = json.loads(http(url + '/?action=session', opener=opener)[1])['sentinel']
     content = b'ordinary multipart upload\n' * 4096
@@ -233,8 +241,13 @@ php_value session.save_path tcp://redis:6379
         require(http(url + '/?action=fatal')[0] == 500, 'Fatal trigger did not execute')
         status, response, _ = http(url + '/early/index.php')
         require(status == 200 and json.loads(response)['pid'] == initial_pid, 'Stale-state sequence failed on same worker')
-    malicious = [multipart(b'x', b'X-Padding: abcdefghijklmnopqrstuvwxyz\r\n' * 100000),
-                 (('&'.join('a[]' + '[b]' * 63 + '=c' for _ in range(1000))).encode(),
+    # The fixed multipart parser discards unused headers instead of retaining
+    # them. This spray must now complete safely inside the 8 MiB soft limit.
+    body, headers = multipart(b'x', b'X-Padding: abcdefghijklmnopqrstuvwxyz\r\n' * 100000)
+    status, response, _ = http(url + '/oom/index.php', data=body, headers=headers)
+    require(status == 200 and json.loads(response)['file_sha256'] == hashlib.sha256(b'x').hexdigest(),
+            'Multipart header filtering failed')
+    malicious = [(('&'.join('a[]' + '[b]' * 63 + '=c' for _ in range(1000))).encode(),
                   {'Content-Type': 'application/x-www-form-urlencoded'})]
     for body, headers in malicious:
         status, _, _ = http(url + '/oom/index.php', data=body, headers=headers)
@@ -244,6 +257,7 @@ php_value session.save_path tcp://redis:6379
     logs_result = subprocess.run(['docker', 'logs', container], capture_output=True, text=True)
     logs = logs_result.stdout + logs_result.stderr
     require('Allowed memory size' in logs, 'No evidence of OOM trigger')
+    require('php2shell_deliberate_test_fatal' in logs and 'auto_detect_line_endings' in logs, 'Fatal/early-diagnostic trigger not observed')
     require(not re.search(r'Segmentation fault|signal 11|signal 7|corrupted|double free', logs, re.I), 'Apache memory corruption detected')
     (lab.evidence / 'apache-security.log').write_text(logs)
     lab.remove(container)
@@ -302,7 +316,7 @@ def persistence(candidate, lab, mysql):
             status, response, _ = http(url + '/ocs/v2.php/cloud/user?format=json', opener=session_opener, headers={'OCS-APIRequest': 'true'})
             require(status == 200 and json.loads(response)['ocs']['data']['id'] == 'testadmin', 'Login session did not survive image switch')
         # Test actual form login and Redis session, retaining the cookie jar across replacements.
-        jar = http.cookiejar.CookieJar()
+        jar = CookieJar()
         session_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
         status, page, _ = http(url + '/login', opener=session_opener)
         token = re.search(r'data-requesttoken="([^"]+)"', page.decode())
