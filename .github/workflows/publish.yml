@@ -1,0 +1,86 @@
+name: Build, verify and publish patched Nextcloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified image to GHCR
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php2shell-build
+  cancel-in-progress: false
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/kirari04/nextcloud-php2shell-fix
+      LOCAL_IMAGE: nextcloud-php2shell:verified
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Syntax checks
+        run: |
+          bash -n build/*.sh scripts/*.sh
+          python3 -m py_compile tests/verify-image.py
+          git diff --check
+          mkdir -p "$RUNNER_TEMP/evidence"
+      - name: Build patched runtime and run upstream security regressions
+        run: |
+          set -o pipefail
+          docker buildx build --platform linux/amd64 --target runtime --load \
+            --tag "$LOCAL_IMAGE" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --cache-from type=gha,scope=nextcloud-php2shell \
+            --cache-to type=gha,mode=max,scope=nextcloud-php2shell \
+            --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/build.log"
+          id=$(docker create "$LOCAL_IMAGE")
+          docker cp "$id:/usr/local/share/php2shell/upstream" "$RUNNER_TEMP/evidence/upstream"
+          docker rm -v "$id"
+      - name: Verify image contract, Apache security and persistent volume roundtrip
+        run: |
+          set -o pipefail
+          python3 tests/verify-image.py "$LOCAL_IMAGE" --evidence-dir "$RUNNER_TEMP/evidence/integration" \
+            2>&1 | tee "$RUNNER_TEMP/evidence/integration.log"
+      - name: Log in to GHCR
+        if: inputs.publish
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the exact tested image and verify registry roundtrip
+        if: inputs.publish
+        run: |
+          set -euo pipefail
+          tag="34.0.4-php8.5.12-${GITHUB_SHA:0:12}"
+          tested_id=$(docker image inspect "$LOCAL_IMAGE" --format '{{.Id}}')
+          docker tag "$LOCAL_IMAGE" "$IMAGE:$tag"
+          docker push "$IMAGE:$tag"
+          digest=$(docker buildx imagetools inspect "$IMAGE:$tag" --format '{{.Manifest.Digest}}')
+          test -n "$digest"
+          docker pull "$IMAGE@$digest"
+          test "$(docker image inspect "$IMAGE@$digest" --format '{{.Id}}')" = "$tested_id"
+          docker run --rm --entrypoint php "$IMAGE@$digest" -r 'if (PHP_VERSION !== "8.5.12") exit(1); echo PHP_VERSION, PHP_EOL;'
+          docker tag "$LOCAL_IMAGE" "$IMAGE:34.0.4-php8.5.12"
+          docker push "$IMAGE:34.0.4-php8.5.12"
+          printf '%s\n' "$IMAGE@$digest" | tee "$RUNNER_TEMP/evidence/published-image.txt"
+          printf 'Verified and published: `%s@%s`\n\nNextcloud 34.0.4; PHP 8.5.12; linux/amd64.\n' "$IMAGE" "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verification-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence
+          retention-days: 30
+          if-no-files-found: error
