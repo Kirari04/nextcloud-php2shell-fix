@@ -230,12 +230,14 @@ php_value session.save_path tcp://redis:6379
     (lab.evidence / 'apache-runtime.json').write_text(json.dumps(details, indent=2) + '\n')
     jar = CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-    sentinel = json.loads(http(url + '/?action=session', opener=opener)[1])['sentinel']
+    require(json.loads(http(url + '/?action=session-read', opener=opener)[1])['sentinel'] is None, 'Unseeded session unexpectedly contains state')
+    sentinel = json.loads(http(url + '/?action=session-seed', opener=opener)[1])['sentinel']
+    require(isinstance(sentinel, str) and len(sentinel) == 64, 'Session was not seeded')
     content = b'ordinary multipart upload\n' * 4096
     body, headers = multipart(content)
     status, response, _ = http(url + '/', data=body, headers=headers, opener=opener)
     require(status == 200 and json.loads(response)['file_sha256'] == hashlib.sha256(content).hexdigest(), 'Normal multipart upload failed')
-    require(json.loads(http(url + '/?action=session', opener=opener)[1])['sentinel'] == sentinel, 'Upload progress broke session')
+    require(json.loads(http(url + '/?action=session-read', opener=opener)[1])['sentinel'] == sentinel, 'Upload progress broke session')
     initial_pid = details['pid']
     for _ in range(12):
         require(http(url + '/?action=fatal')[0] == 500, 'Fatal trigger did not execute')

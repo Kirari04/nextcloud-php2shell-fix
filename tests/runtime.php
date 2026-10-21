@@ -4,10 +4,12 @@ $action = $_GET['action'] ?? 'info';
 if ($action === 'fatal') {
     php2shell_deliberate_test_fatal();
 }
-if ($action === 'session') {
+if ($action === 'session-seed' || $action === 'session-read') {
     session_start();
-    $_SESSION['sentinel'] ??= 'persistent-igbinary-redis-session';
-    echo json_encode(['sentinel' => $_SESSION['sentinel'], 'pid' => getmypid()]);
+    if ($action === 'session-seed') {
+        $_SESSION['sentinel'] = bin2hex(random_bytes(32));
+    }
+    echo json_encode(['sentinel' => $_SESSION['sentinel'] ?? null, 'pid' => getmypid()]);
     exit;
 }
 $modules = get_loaded_extensions();

@@ -29,6 +29,16 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Expose Actions cache credentials to Buildx shell steps
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            for (const name of ['ACTIONS_RUNTIME_TOKEN', 'ACTIONS_RESULTS_URL']) {
+              const value = process.env[name];
+              if (!value) throw new Error(`Missing ${name}`);
+              if (name.endsWith('TOKEN')) core.setSecret(value);
+              core.exportVariable(name, value);
+            }
       - name: Syntax checks
         run: |
           bash -n build/*.sh scripts/*.sh
@@ -39,8 +49,8 @@ jobs:
         run: |
           set -o pipefail
           docker buildx build --platform linux/amd64 --target build \
-            --cache-from type=gha,scope=nextcloud-php2shell-build \
-            --cache-to type=gha,mode=max,scope=nextcloud-php2shell-build \
+            --cache-from type=gha,version=2,scope=nextcloud-php2shell-build \
+            --cache-to type=gha,version=2,mode=max,scope=nextcloud-php2shell-build \
             --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/php-build.log"
       - name: Build patched runtime and run upstream security regressions
         run: |
@@ -48,9 +58,9 @@ jobs:
           docker buildx build --platform linux/amd64 --target runtime --load \
             --tag "$LOCAL_IMAGE" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            --cache-from type=gha,scope=nextcloud-php2shell-build \
-            --cache-from type=gha,scope=nextcloud-php2shell \
-            --cache-to type=gha,mode=max,scope=nextcloud-php2shell \
+            --cache-from type=gha,version=2,scope=nextcloud-php2shell-build \
+            --cache-from type=gha,version=2,scope=nextcloud-php2shell \
+            --cache-to type=gha,version=2,mode=max,scope=nextcloud-php2shell \
             --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/build.log"
           id=$(docker create "$LOCAL_IMAGE")
           docker cp "$id:/usr/local/share/php2shell/upstream" "$RUNNER_TEMP/evidence/upstream"
@@ -83,7 +93,27 @@ jobs:
           docker tag "$LOCAL_IMAGE" "$IMAGE:34.0.4-php8.5.12"
           docker push "$IMAGE:34.0.4-php8.5.12"
           printf '%s\n' "$IMAGE@$digest" | tee "$RUNNER_TEMP/evidence/published-image.txt"
-          printf 'Verified and published: `%s@%s`\n\nNextcloud 34.0.4; PHP 8.5.12; linux/amd64.\n' "$IMAGE" "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify public pull without credentials
+        if: inputs.publish
+        run: |
+          set -euo pipefail
+          reference=$(cat "$RUNNER_TEMP/evidence/published-image.txt")
+          anonymous_config=$(mktemp -d)
+          trap 'rm -rf "$anonymous_config"' EXIT
+          # First publication may need the owner to change GHCR visibility once.
+          # Public visibility is a required release gate, not inferred from repo visibility.
+          public=false
+          for attempt in {1..20}; do
+            if docker --config "$anonymous_config" pull "$reference"; then
+              public=true
+              break
+            fi
+            echo 'Awaiting public package visibility: https://github.com/users/Kirari04/packages/container/nextcloud-php2shell-fix/settings'
+            sleep 15
+          done
+          test "$public" = true
+          printf 'Anonymous pull passed: %s\n' "$reference" | tee "$RUNNER_TEMP/evidence/public-pull.txt"
+          printf 'Verified and publicly available: `%s`\n\nNextcloud 34.0.4; PHP 8.5.12; linux/amd64.\n' "$reference" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

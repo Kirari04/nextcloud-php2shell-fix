@@ -62,6 +62,8 @@ The isolated compatibility test switches back to the original 34.0.4 image solel
 
 Run the **Build, verify and publish patched Nextcloud** workflow with `publish=false` for validation or `publish=true` to publish after all checks pass. The workflow needs only its scoped `GITHUB_TOKEN` (`contents:read`, `packages:write`); it has no production credentials.
 
+The GHCR package must be **Public** in its [package settings](https://github.com/users/Kirari04/packages/container/nextcloud-php2shell-fix/settings), independently of this public repository. The first publication waits up to five minutes for that setting. A credential-free pull of the published digest must pass before the workflow reports a successful public release.
+
 The Dockerfile pins the production manifest. Build headers come from the corresponding Debian snapshot; the build fails if installing them changes any existing runtime package. PHP source is checked against the pinned php.net SHA-256 and a detached signature using the original official image's pinned PHP signing keys. PECL archive checksums are pinned too. The final image inherits the original OS libraries; linker checks and runtime tests guard against missing dependencies.
 
 Verification gates:
@@ -70,7 +72,7 @@ Verification gates:
 - Byte-for-byte checks of Nextcloud, PHP/Apache configuration, entrypoint and cron; identical OS package lists and image runtime settings; matching PHP modules, PECL versions and existing INI values.
 - HTTP verification of Apache's PHP version/SAPI/modules and the deployed upload/memory limits; normal multipart uploads; repeated-worker fatal-error/INI-diagnostic sequences; large multipart-header input and nested-input OOM cases; Redis/igbinary session continuity.
 - Official → patched → official with the same disposable MySQL 8.4, Redis and volumes: healthcheck, form login/session continuity, WebDAV upload/download/listing, cron, unchanged config hash, installed apps, DB schema and migration records, file hashes, custom-app/theme data and ownership. Files written while patched must remain readable after restoring official.
-- Publication pushes the exact tested image; pulling its registry digest must return the same image ID. Failed verification prevents publication.
+- Publication pushes the exact tested image; pulling its registry digest must return the same image ID. Failed image verification prevents publication, and failed anonymous access prevents a successful public release.
 
 The tests pin dependency image digests in `tests/verify-image.py`; their exact runtime versions are recorded in `dependencies.txt`. The supplied production inventory specified `mysql:8.4` and `redis:latest`, not their immutable digests. These are compatibility tests of that dependency family, not a claim to have cloned all production app configuration or user data. The 50 GiB upload setting is checked; tests transfer small fixtures, not a 50 GiB file.
 
