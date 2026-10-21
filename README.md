@@ -2,19 +2,27 @@
 
 Temporary drop-in replacements for **Nextcloud Apache, linux/amd64**, rebuilding PHP in its existing minor branch to fix **CVE-2026-109618 and CVE-2026-109619**. Builds and publication run in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions).
 
-**Match the image to your data volume's exact Nextcloud version.** If startup reports data `34.0.5.1` and image `34.0.4.1`, use the 34.0.5 replacement once published. Do not change `version.php`, force a downgrade, or use a different application version to bypass this check.
+**Match the image to your data volume's exact Nextcloud version.** If startup reports data `34.0.5.1` and image `34.0.4.1`, use the published **34.0.5** replacement below. Do not change `version.php`, force a downgrade, or use a different application version to bypass this check.
 
-The build catalog also supports community releases **33.0.10 / PHP 8.4.27**, **34.0.5 / PHP 8.5.12**, and **35.0.2 / PHP 8.5.12**, all Apache/linux-amd64. Each is built from its own pinned official image and must pass its own security and persistence tests before publication. Their publication references will be listed here after successful verification. FPM, Alpine and other CPU architectures are not included.
+Each release is built from its own pinned official image and passes its own security and persistence tests before publication. FPM, Alpine and other CPU architectures are not included. The 35.0.2 / PHP 8.5.12 community build is still undergoing integration verification.
 
 **Published publicly and verified on 21 October 2026.** No registry login is required.
 
-```text
-ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:82e049f237314ac4d7b974e800059a729c9fb81d0ff3a8b315ce71518658c36c
+Image namespace: `ghcr.io/kirari04/nextcloud-php2shell-fix`. Append `:<tag>` or `@<digest>` from this table:
+
+| Nextcloud data version | Tag | Immutable digest | Upstream tests |
+| --- | --- | --- | --- |
+| 33.0.10.1 | `33.0.10-php8.4.27` | `sha256:3a7389af9bd76b147902c958c611dc9db5ab7de16b9597d59410883ad0ce2534` | 176 passed |
+| 34.0.4.1 | `34.0.4-php8.5.12` | `sha256:82e049f237314ac4d7b974e800059a729c9fb81d0ff3a8b315ce71518658c36c` | 180 passed |
+| 34.0.5.1 | `34.0.5-php8.5.12` | `sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb` | 180 passed |
+
+For the reported **34.0.5.1** startup error, use:
+
+```yaml
+image: ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb
 ```
 
-Readable tag: `ghcr.io/kirari04/nextcloud-php2shell-fix:34.0.4-php8.5.12`.
-
-[Successful GitHub Actions build and publication](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163), built from commit `06de0d98157f4118886f2b788802b8508fb2ce9f`: **180 upstream regressions passed, zero failures and zero skips**. Apache security/session tests and the official → patched → official persistence roundtrip passed. Configuration and database schema hashes stayed identical; login sessions and files written under the patched image survived the return. Both the authenticated registry roundtrip and credential-free pull passed.
+[Community build and publication](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417), source commit `3cb65203a1588f8753e2c24d5aa1fb063e95fdb8`. The [original 34.0.4 build](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163), source commit `06de0d98157f4118886f2b788802b8508fb2ce9f`, remains unchanged. Every published row above has **zero failures and zero skips** in its selected upstream suite, plus passing Apache security/session tests and an official → patched → same-official persistence roundtrip. Configuration and database schema hashes stayed identical; login sessions and files written under the patched image survived the return. Authenticated registry roundtrips and credential-free pulls passed.
 
 ## What stays the same
 
