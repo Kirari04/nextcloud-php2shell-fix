@@ -4,7 +4,7 @@ Temporary drop-in replacements for **Nextcloud Apache, linux/amd64**, rebuilding
 
 **Match the image to your data volume's exact Nextcloud version.** If startup reports data `34.0.5.1` and image `34.0.4.1`, use the published **34.0.5** replacement below. Do not change `version.php`, force a downgrade, or use a different application version to bypass this check.
 
-Each release is built from its own pinned official image and passes its own security and persistence tests before publication. FPM, Alpine and other CPU architectures are not included. The 35.0.2 / PHP 8.5.12 community build is still undergoing integration verification.
+Each release is built from its own pinned official image and passes its own security and persistence tests before publication. FPM, Alpine and other CPU architectures are not included.
 
 **Published publicly and verified on 21 October 2026.** No registry login is required.
 
@@ -15,6 +15,9 @@ Image namespace: `ghcr.io/kirari04/nextcloud-php2shell-fix`. Append `:<tag>` or 
 | 33.0.10.1 | `33.0.10-php8.4.27` | `sha256:3a7389af9bd76b147902c958c611dc9db5ab7de16b9597d59410883ad0ce2534` | 176 passed |
 | 34.0.4.1 | `34.0.4-php8.5.12` | `sha256:82e049f237314ac4d7b974e800059a729c9fb81d0ff3a8b315ce71518658c36c` | 180 passed |
 | 34.0.5.1 | `34.0.5-php8.5.12` | `sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb` | 180 passed |
+| 35.0.2.2 | `35.0.2-php8.5.12` | `sha256:a41bcec44fe4eea23c7026e2b0af756c3894bb07429ae6d177c5e9fff89f44d9` | 180 passed |
+
+The three community releases also have exact-version `33.0.10-apache`, `34.0.5-apache` and `35.0.2-apache` aliases, resolving to the same respective digests.
 
 For the reported **34.0.5.1** startup error, use:
 
@@ -111,7 +114,7 @@ The integration suite creates uniquely named disposable containers/networks/volu
 
 ## Sources
 
-- [PHP security release announcement](https://www.php.net/archive/2026.php#2026-10-21-1) and [PHP 8.5.12 release checksums](https://www.php.net/releases/index.php?json&version=8.5.12).
+- [PHP security release announcement](https://www.php.net/archive/2026.php#2026-10-21-1), [PHP 8.4.27 release checksums](https://www.php.net/releases/index.php?json&version=8.4.27), and [PHP 8.5.12 release checksums](https://www.php.net/releases/index.php?json&version=8.5.12).
 - [CVE-2026-109618: RCE via OOM corruption](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w).
 - [CVE-2026-109619: RCE via stale global state](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp).
 - [Historical official Nextcloud manifest and production image ID](https://github.com/docker-library/repo-info/blob/2c2d62fb4d0d9e4a063692f51768f8405fd0a260/repos/nextcloud/remote/34.0.4-apache.md).
