@@ -68,7 +68,7 @@ Verification gates:
 
 - Upstream OOM and session lifecycle regressions from the verified PHP source, with a separate test-only CGI binary and `zend_test`. Required parser and session cases must actually pass. Test-only binaries and source are excluded from the final image.
 - Byte-for-byte checks of Nextcloud, PHP/Apache configuration, entrypoint and cron; identical OS package lists and image runtime settings; matching PHP modules, PECL versions and existing INI values.
-- HTTP verification of Apache's PHP version/SAPI/modules and the deployed upload/memory limits; normal multipart uploads; repeated-worker fatal-error/INI-diagnostic sequences; bounded multipart-header and nested-input OOM cases; Redis/igbinary session continuity.
+- HTTP verification of Apache's PHP version/SAPI/modules and the deployed upload/memory limits; normal multipart uploads; repeated-worker fatal-error/INI-diagnostic sequences; large multipart-header input and nested-input OOM cases; Redis/igbinary session continuity.
 - Official → patched → official with the same disposable MySQL 8.4, Redis and volumes: healthcheck, form login/session continuity, WebDAV upload/download/listing, cron, unchanged config hash, installed apps, DB schema and migration records, file hashes, custom-app/theme data and ownership. Files written while patched must remain readable after restoring official.
 - Publication pushes the exact tested image; pulling its registry digest must return the same image ID. Failed verification prevents publication.
 
