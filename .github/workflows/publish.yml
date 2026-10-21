@@ -1,6 +1,9 @@
 name: Build, verify and publish patched Nextcloud
 
 on:
+  push:
+    branches: [main]
+    paths: ['Dockerfile', 'build/**', 'tests/**', '.github/workflows/**']
   workflow_dispatch:
     inputs:
       publish:
