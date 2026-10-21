@@ -1,120 +1,143 @@
 # nextcloud-php2shell-fix
 
-Temporary drop-in replacements for **Nextcloud Apache, linux/amd64**, rebuilding PHP in its existing minor branch to fix **CVE-2026-109618 and CVE-2026-109619**. Builds and publication run in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions).
+Community-built, temporary replacements for the official **Nextcloud Apache image on linux/amd64**, addressing **PHP2Shell: CVE-2026-109618 and CVE-2026-109619**.
 
-**Match the image to your data volume's exact Nextcloud version.** If startup reports data `34.0.5.1` and image `34.0.4.1`, use the published **34.0.5** replacement below. Do not change `version.php`, force a downgrade, or use a different application version to bypass this check.
+Each image preserves its official baseline's exact Nextcloud version and rebuilds PHP CLI, Apache's PHP module and extensions from the patched upstream release in the same PHP minor branch. PHP identifies **8.4.27 and 8.5.12** as fixed releases in its [security advisory](https://www.php.net/archive/2026.php#2026-10-21-5).
 
-Each release is built from its own pinned official image and passes its own security and persistence tests before publication. FPM, Alpine and other CPU architectures are not included.
+Use these images as a bridge until an official image with the same Nextcloud version and patched PHP is available. Source, tests and publication are visible in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/workflows/publish.yml).
 
-**Published publicly and verified on 21 October 2026.** No registry login is required.
+## Published images
 
-Image namespace: `ghcr.io/kirari04/nextcloud-php2shell-fix`. Append `:<tag>` or `@<digest>` from this table:
+Published and verified on **21 October 2026**. All listed images are publicly pullable without a registry login. Supported variant: **Apache, linux/amd64**. FPM, Alpine and other architectures are outside this release set.
 
-| Nextcloud data version | Tag | Immutable digest | Upstream tests |
+Image namespace: `ghcr.io/kirari04/nextcloud-php2shell-fix`. Append `:<tag>` or `@<digest>` below. The four-component Nextcloud version is the value reported by `status.php`.
+
+| Nextcloud version | Tag | Immutable digest | Build, test and publication job |
 | --- | --- | --- | --- |
-| 33.0.10.1 | `33.0.10-php8.4.27` | `sha256:3a7389af9bd76b147902c958c611dc9db5ab7de16b9597d59410883ad0ce2534` | 176 passed |
-| 34.0.4.1 | `34.0.4-php8.5.12` | `sha256:82e049f237314ac4d7b974e800059a729c9fb81d0ff3a8b315ce71518658c36c` | 180 passed |
-| 34.0.5.1 | `34.0.5-php8.5.12` | `sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb` | 180 passed |
-| 35.0.2.2 | `35.0.2-php8.5.12` | `sha256:a41bcec44fe4eea23c7026e2b0af756c3894bb07429ae6d177c5e9fff89f44d9` | 180 passed |
+| 33.0.10.1 | `33.0.10-php8.4.27` | `sha256:3a7389af9bd76b147902c958c611dc9db5ab7de16b9597d59410883ad0ce2534` | [Passed; 176 upstream tests](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/job/119341533408) |
+| 34.0.4.1 | `34.0.4-php8.5.12` | `sha256:82e049f237314ac4d7b974e800059a729c9fb81d0ff3a8b315ce71518658c36c` | [Passed; 180 upstream tests](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163/job/119322607167) |
+| 34.0.5.1 | `34.0.5-php8.5.12` | `sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb` | [Passed; 180 upstream tests](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/job/119341533507) |
+| 35.0.2.2 | `35.0.2-php8.5.12` | `sha256:a41bcec44fe4eea23c7026e2b0af756c3894bb07429ae6d177c5e9fff89f44d9` | [Passed; 180 upstream tests](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/job/119341533779) |
 
-The three community releases also have exact-version `33.0.10-apache`, `34.0.5-apache` and `35.0.2-apache` aliases, resolving to the same respective digests.
+The `33.0.10-apache`, `34.0.5-apache` and `35.0.2-apache` aliases resolve to the same respective images. Revision tags additionally include the first 12 characters of the source commit. Pin the **digest** to use the exact verified image. There are no floating `stable` or `latest` aliases.
 
-For the reported **34.0.5.1** startup error, use:
+## Build and publication evidence
 
-```yaml
-image: ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb
+Each release links directly to its successful job above. Those jobs cover compilation, security tests, application compatibility, publication and an anonymous pull. The published builds use these source revisions:
+
+- **33.0.10, 34.0.5 and 35.0.2:** [source commit `3cb65203a158`](https://github.com/Kirari04/nextcloud-php2shell-fix/tree/3cb65203a1588f8753e2c24d5aa1fb063e95fdb8), [workflow at that commit](https://github.com/Kirari04/nextcloud-php2shell-fix/blob/3cb65203a1588f8753e2c24d5aa1fb063e95fdb8/.github/workflows/publish.yml), [successful run](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417).
+- **34.0.4:** [source commit `06de0d98157f`](https://github.com/Kirari04/nextcloud-php2shell-fix/tree/06de0d98157f4118886f2b788802b8508fb2ce9f), [workflow at that commit](https://github.com/Kirari04/nextcloud-php2shell-fix/blob/06de0d98157f4118886f2b788802b8508fb2ce9f/.github/workflows/publish.yml), [successful run](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163).
+
+Verification artifacts: [33.0.10](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/artifacts/12360714868), [34.0.4](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163/artifacts/12359273370), [34.0.5](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/artifacts/12363700228), [35.0.2](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/artifacts/12362645757).
+
+Artifacts are retained for **30 days**. [GitHub requires sign-in to download workflow artifacts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts); pulling the container images requires no sign-in. Each artifact contains:
+
+- `php-build.log`, `build.log` and `upstream/upstream.txt`: source verification, compilation and individual upstream test results. All published suites report **zero failures and zero skips**.
+- `integration/passed.json`, runtime inventories, file/package comparisons and persistence reports: the tested baseline, PHP/Nextcloud versions and application results.
+- `published-image.txt`: the exact published registry digest, matching the release table.
+- `public-pull.txt`: the successful pull using an empty Docker credential configuration.
+
+The **Publish the exact tested image and verify registry roundtrip** step pushes the tested local image, pulls its registry digest and checks that its image ID matches. The **Verify public pull without credentials** step then checks public access. The image's `org.opencontainers.image.revision` label records the source commit. Upstream test results are also included at `/usr/local/share/php2shell/upstream/` inside each image.
+
+For example, inspect the published 34.0.5 image independently:
+
+```bash
+image_ref=ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb
+docker pull "$image_ref"
+docker image inspect "$image_ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+docker run --rm --entrypoint php "$image_ref" -v
+docker run --rm --entrypoint cat "$image_ref" /usr/local/share/php2shell/upstream/upstream.txt
 ```
 
-[Community build and publication](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417), source commit `3cb65203a1588f8753e2c24d5aa1fb063e95fdb8`. The [original 34.0.4 build](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39629236163), source commit `06de0d98157f4118886f2b788802b8508fb2ce9f`, remains unchanged. Every published row above has **zero failures and zero skips** in its selected upstream suite, plus passing Apache security/session tests and an official → patched → same-official persistence roundtrip. Configuration and database schema hashes stayed identical; login sessions and files written under the patched image survived the return. Authenticated registry roundtrips and credential-free pulls passed.
+The revision should be `3cb65203a1588f8753e2c24d5aa1fb063e95fdb8` and PHP should report `8.5.12`. The Actions job also verifies Apache's PHP version over HTTP.
 
-## What stays the same
+## Compatibility and test coverage
 
-Each final image starts from its own pinned official baseline in [`releases.json`](releases.json). The original 34.0.4 release uses the exact image from the supplied deployment inventory:
+Each release starts from its own pinned official image. [`releases.json`](releases.json) records the baseline manifest digest, image ID, exact Nextcloud/PHP versions, PHP source checksum and Debian package snapshot.
 
-```text
-nextcloud@sha256:a6281e8046ba1a15bfd4225c8027daee7fd2fff6c593b446f4cd4983a432eef1
-Image ID: sha256:3de31768a5ed5bb14157679c1048465d3f5425347c37c1a9f6ff7207ad1f7e54
+The final image preserves the Nextcloud payload, entrypoint, cron script, PHP/Apache configuration, OS packages, UID/GID, port, stop signal and volume contract. Existing `/var/www/html` and `/tmp` mounts remain usable. PHP CLI, Apache's `libphp.so`, bundled shared extensions and development/source metadata are rebuilt. PECL extensions retain their baseline versions and options, including Redis/memcached igbinary support and Redis lz4/zstd support.
+
+PHP source archives are checked against pinned php.net SHA-256 values and detached signatures using the official baseline's PHP signing keys. PECL archive checksums are pinned. Installing build headers must leave every existing runtime package version unchanged; the final image uses the baseline's OS libraries and passes linker checks.
+
+The linked jobs verify:
+
+- Selected upstream OOM and session lifecycle regressions, including request parsing and repeated-request cases. A separate test-only CGI build and `zend_test` enable cases that would otherwise skip; those test binaries are excluded from the final image.
+- Byte-for-byte application/configuration checks, identical OS package lists, matching image startup settings, PHP modules, PECL versions and existing INI values.
+- Actual Apache PHP version/SAPI/modules, multipart uploads, bounded OOM inputs, same-worker fatal-error/early-INI-diagnostic sequences and Redis/igbinary session continuity.
+- **Official → patched → same official** using the same disposable database, Redis and volumes: health, form login/session continuity, WebDAV, cron, unchanged config/schema/migration records, file hashes, custom-app/theme data and ownership. Files written while patched must survive the return.
+
+Integration tests use pinned **MySQL 8.4.11** and **Redis 8.10.2** images; exact versions are recorded in `integration/dependencies.txt`. Coverage uses disposable fixtures rather than a copy of every installation's apps and data. The PHP tests are a focused suite. Upload tests check the 50 GiB configuration values while transferring small fixtures; they do not exercise a 50 GiB transfer or production concurrency.
+
+## Switch an existing installation
+
+**Choose the exact Nextcloud version already installed.** These images patch PHP without requiring an application/database upgrade. Check the Nextcloud administration page or run the following against the existing Compose service, replacing `nextcloud` if the service has another name:
+
+```bash
+docker compose exec -T --user www-data nextcloud php occ status --output=json
 ```
 
-It preserves the Nextcloud payload, entrypoint, cron script, PHP/Apache configuration, OS packages, UID/GID, exposed port, stop signal and `/var/www/html` volume contract. `/tmp` mounts also remain usable. MySQL, Redis, HAProxy, phpMyAdmin and their configuration do not need changes.
+1. Change only the Nextcloud service's `image:` to the matching digest from the release table. Keep its existing environment, mounts, dependencies, networks and healthcheck. For an installation on **34.0.5.1**, the image field is:
 
-The replacement changes PHP CLI, Apache's `libphp.so`, bundled shared extensions and the PHP development/source metadata. All PECL extensions are rebuilt against the patched headers at the original versions: APCu 5.1.28, igbinary 3.2.17RC1, imagick 3.8.1, memcached 3.4.0 and redis 6.3.0. Redis/memcached igbinary support, Redis lz4/zstd support and igbinary session serialization are preserved.
+   ```yaml
+   image: ghcr.io/kirari04/nextcloud-php2shell-fix@sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb
+   ```
 
-No application or database upgrade is intended or required. The PHP fixes add upstream memory-limit and request-state protections; configuration-only mitigations are not a complete fix.
-
-## Switch to the replacement
-
-Choose the release matching the version reported by your current installation or its startup error. Use that release's immutable image reference. It is also recorded in the workflow summary and `published-image.txt` artifact. Revision tags also include the source commit. Switching from 34.0.4 to 34.0.5 is an application upgrade; the PHP patch does not require that upgrade.
-
-1. In the existing Compose/Portainer stack, change **only the `nextcloud` service's `image:`** to the published digest. Keep every existing environment variable, mount, dependency, network and healthcheck.
-2. Recreate only that service. With Compose, from the directory containing the actual stack definition:
+2. Recreate only that service from the directory containing the existing Compose definition:
 
    ```bash
    docker compose pull nextcloud
    docker compose up -d --no-deps --force-recreate nextcloud
    ```
 
-   With Portainer, edit the existing `nc` stack. Do not request a pull/redeployment of unrelated services or remove volumes.
+   For Portainer, edit the image in the existing stack and redeploy the Nextcloud service while retaining its configuration and volumes.
 
-3. Confirm the existing healthcheck becomes healthy:
+3. Check the runtime and application status:
 
    ```bash
-   docker exec nextcloudcontainer php -v
-   docker exec nextcloudcontainer curl -fsS http://127.0.0.1/status.php
+   docker compose exec -T nextcloud php -v
+   docker compose exec -T nextcloud curl -fsS http://127.0.0.1/status.php
    ```
 
-   Expect PHP **8.4.27** for Nextcloud 33 or **8.5.12** for Nextcloud 34/35, the same Nextcloud version as before, `installed:true`, `maintenance:false`, `needsDbUpgrade:false`. A volume reporting **34.0.5.1** needs the **34.0.5** image. If `needsDbUpgrade` is true, stop and investigate the existing application's upgrade state separately.
+   Expect the PHP version in the release tag, the same Nextcloud version as before, `installed:true`, `maintenance:false` and `needsDbUpgrade:false`.
 
-Keep the existing values `PHP_MEMORY_LIMIT=1G`, `PHP_UPLOAD_LIMIT=50G`, `APACHE_BODY_LIMIT=53687091200`, `NEXTCLOUD_UPDATE=1` and `NEXTCLOUD_INIT_HTACCESS=true`. Do not run `occ upgrade`, replace config.php, migrate data, or recreate MySQL/Redis to make this image work. No production changes are made by this repository or workflow.
+Keep existing upload limits, memory limits, database/Redis settings and other configuration. An `occ upgrade`, data migration, replacement `config.php` or database recreation is not part of this PHP-only switch.
 
-## Return to the official image
+If startup reports that the data version is higher than the image version, select an image matching the installed version. Do not edit stored version information or force a downgrade. If `needsDbUpgrade` is true, investigate the installation's application upgrade state separately.
 
-Use an official **Apache image with the same exact Nextcloud version**, and patched PHP in the original minor branch (8.4.27+ for Nextcloud 33, 8.5.12+ for Nextcloud 34/35). Check the candidate on a test machine with Docker, Python 3 and curl. For a 34.0.5 installation:
+## Return to an official image
+
+Choose an official **Apache/linux-amd64** image with the **same exact Nextcloud version** and patched PHP in its original minor branch: **8.4.27+ for Nextcloud 33** or **8.5.12+ for Nextcloud 34/35**.
+
+From a clone of this repository, check the candidate on a test machine with Docker, Python 3 and curl. For a 34.0.5 installation:
 
 ```bash
 bash scripts/check-official.sh nextcloud:34.0.5-apache 34.0.5
 ```
 
-Replace both version arguments for another release; omitting the second argument retains the original 34.0.4 default. The script pulls the candidate, checks its architecture and Nextcloud version without running the Nextcloud entrypoint, starts an isolated Apache probe, verifies the web PHP version, then prints its immutable official digest. It fails if the application version differs or PHP is unpatched. Use that digest in the same `image:` field and repeat the two Compose commands above. Reuse the same configuration, database and volumes.
+Set both version arguments for the release being checked. The script checks architecture, exact Nextcloud version, CLI PHP and Apache PHP over HTTP using an isolated probe. When it passes, use the printed official digest in `image:` and repeat the same Compose pull/recreate commands, retaining the existing configuration, database and volumes.
 
-**Do not blindly switch to `nextcloud:stable`.** At preparation time it already points to 34.0.5. Its entrypoint would upgrade a 34.0.4 installation. If upstream only publishes a patched image containing a newer Nextcloud version, returning to it is a separate Nextcloud upgrade; a migration-free return to that newer image cannot be promised. Keep this replacement until a matching official image exists, or plan that upgrade separately.
+Floating official tags such as `stable` can advance to a newer Nextcloud version. A move to a newer application version is a separate Nextcloud upgrade. The official `33.0.10-apache`, `34.0.4-apache`, `34.0.5-apache` and `35.0.2-apache` tags were checked on **21 October 2026** and rejected by the return checker because they still contained unpatched PHP. Recheck the candidate before returning.
 
-The official `33.0.10-apache`, `34.0.4-apache`, `34.0.5-apache` and `35.0.2-apache` tags were checked on 21 October 2026 and still contained unpatched PHP. The return-check script correctly rejected them.
+The old official images used in compatibility roundtrips contain vulnerable PHP; those tests establish persistence compatibility rather than a safe production rollback target.
 
-Each isolated compatibility test switches back to its same-version original image solely to establish data/configuration compatibility. Those original images still contain vulnerable PHP and are **not** security-safe production rollback targets.
+## Build and verify
 
-## Build and verification
+The [manual Actions workflow](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/workflows/publish.yml) accepts an exact `release`, `community` for 33.0.10/34.0.5/35.0.2, or `all` for all four releases. Use `publish=false` to validate or `publish=true` to publish each release after its tests pass. Publishing uses scoped `GITHUB_TOKEN` permissions (`contents:read`, `packages:write`); the workflow has no deployment credentials or deployment step. A public pull must pass before a successful public release is reported.
 
-Run the **Build, verify and publish patched Nextcloud** workflow with `publish=false` for validation or `publish=true` to publish after all checks pass. The workflow needs only its scoped `GITHUB_TOKEN` (`contents:read`, `packages:write`); it has no production credentials.
-
-Select an exact `release`, `community` for the three additional releases, or `all` to include 34.0.4. Each matrix job publishes only after its own gates pass. Release tags are `<Nextcloud>-php<PHP>` and `<Nextcloud>-apache`, with an additional source-revision tag. There is no floating `stable` or `latest` alias that could silently upgrade the application. Existing 34.0.4 publication is unchanged by the community run.
-
-The GHCR package must be **Public** in its [package settings](https://github.com/users/Kirari04/packages/container/nextcloud-php2shell-fix/settings), independently of this public repository. The first publication waits up to five minutes for that setting. A credential-free pull of the published digest must pass before the workflow reports a successful public release.
-
-The validated `releases.json` catalog pins each official manifest, image ID, application/runtime version, PHP checksum and Debian snapshot; Dockerfile defaults retain the original 34.0.4 baseline. Build headers come from the corresponding Debian snapshot; the build fails if installing them changes any existing runtime package. PHP source is checked against the pinned php.net SHA-256 and a detached signature using the original official image's pinned PHP signing keys. PECL archive checksums are pinned too. The final image inherits the original OS libraries; linker checks and runtime tests guard against missing dependencies.
-
-Verification gates:
-
-- Selected upstream OOM and session lifecycle regressions from the verified PHP source, with a separate test-only CGI binary and `zend_test`. Required parser, session, hard-limit, callback and CGI-filter cases must actually pass. This is focused regression coverage, not the entire PHP suite. Test-only binaries and source are excluded from the final image.
-- Byte-for-byte checks of Nextcloud, PHP/Apache configuration, entrypoint and cron; identical OS package lists and image runtime settings; matching PHP modules, PECL versions and existing INI values.
-- HTTP verification of Apache's PHP version/SAPI/modules and the deployed upload/memory limits; normal multipart uploads; repeated-worker fatal-error/INI-diagnostic sequences; large multipart-header input and nested-input OOM cases; Redis/igbinary session continuity.
-- Official → patched → official with the same disposable MySQL 8.4, Redis and volumes: healthcheck, form login/session continuity, WebDAV upload/download/listing, cron, unchanged config hash, installed apps, DB schema and migration records, file hashes, custom-app/theme data and ownership. Files written while patched must remain readable after restoring official.
-- Publication pushes the exact tested image; pulling its registry digest must return the same image ID. Failed image verification prevents publication, and failed anonymous access prevents a successful public release.
-
-The tests pin dependency image digests in `tests/verify-image.py`; their exact runtime versions are recorded in `dependencies.txt`. The supplied production inventory specified `mysql:8.4` and `redis:latest`, not their immutable digests. These are compatibility tests of that dependency family, not a claim to have cloned all production app configuration or user data. The 50 GiB upload setting is checked; tests transfer small fixtures, not a 50 GiB file.
-
-Each Actions run retains build logs and verification artifacts for 30 days. Upstream regression results are also included at `/usr/local/share/php2shell/upstream/` in the image. To run the integration suite locally against a built image:
+For local validation of the Dockerfile's default **34.0.4** variant:
 
 ```bash
 docker build --target runtime -t nextcloud-php2shell:verified .
-python3 tests/verify-image.py nextcloud-php2shell:verified --evidence-dir /tmp/nextcloud-php2shell-evidence
+python3 tests/verify-image.py nextcloud-php2shell:verified \
+  --release 34.0.4 --evidence-dir /tmp/nextcloud-php2shell-evidence
 ```
 
-The integration suite creates uniquely named disposable containers/networks/volumes, publishes HTTP only on loopback, and removes only resources it created. It never connects to a production endpoint.
+The suite creates uniquely named disposable containers, networks and volumes, publishes HTTP only on loopback and removes its own resources. See the pinned workflow revisions above for the build arguments used for each published variant.
 
-## Sources
+## Upstream references
 
-- [PHP security release announcement](https://www.php.net/archive/2026.php#2026-10-21-1), [PHP 8.4.27 release checksums](https://www.php.net/releases/index.php?json&version=8.4.27), and [PHP 8.5.12 release checksums](https://www.php.net/releases/index.php?json&version=8.5.12).
+- [PHP security advisory and fixed releases](https://www.php.net/archive/2026.php#2026-10-21-5).
 - [CVE-2026-109618: RCE via OOM corruption](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w).
 - [CVE-2026-109619: RCE via stale global state](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp).
-- [Historical official Nextcloud manifest and production image ID](https://github.com/docker-library/repo-info/blob/2c2d62fb4d0d9e4a063692f51768f8405fd0a260/repos/nextcloud/remote/34.0.4-apache.md).
+- [PHP 8.4.27 source checksums](https://www.php.net/releases/index.php?json&version=8.4.27) and [PHP 8.5.12 source checksums](https://www.php.net/releases/index.php?json&version=8.5.12).
+- [Official Nextcloud image source](https://github.com/nextcloud/docker).
