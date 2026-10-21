@@ -1,9 +1,6 @@
 name: Build, verify and publish patched Nextcloud
 
 on:
-  push:
-    branches: [main]
-    paths: ['Dockerfile', 'build/**', 'tests/**', '.github/workflows/**']
   workflow_dispatch:
     inputs:
       publish:
@@ -38,12 +35,20 @@ jobs:
           python3 -m py_compile tests/verify-image.py
           git diff --check
           mkdir -p "$RUNNER_TEMP/evidence"
+      - name: Build and cache patched PHP and extensions
+        run: |
+          set -o pipefail
+          docker buildx build --platform linux/amd64 --target build \
+            --cache-from type=gha,scope=nextcloud-php2shell-build \
+            --cache-to type=gha,mode=max,scope=nextcloud-php2shell-build \
+            --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/php-build.log"
       - name: Build patched runtime and run upstream security regressions
         run: |
           set -o pipefail
           docker buildx build --platform linux/amd64 --target runtime --load \
             --tag "$LOCAL_IMAGE" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --cache-from type=gha,scope=nextcloud-php2shell-build \
             --cache-from type=gha,scope=nextcloud-php2shell \
             --cache-to type=gha,mode=max,scope=nextcloud-php2shell \
             --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/build.log"

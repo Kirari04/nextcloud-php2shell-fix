@@ -30,7 +30,7 @@ args=(-n -d extension_dir=/usr/local/lib/php/extensions/no-debug-non-zts-2025092
 if [[ -f modules/zend_test.so ]]; then
     args+=(-d "extension=$PWD/modules/zend_test.so")
 fi
-php -n run-tests.php "${args[@]}" -q -j 2 \
+php -n run-tests.php "${args[@]}" -q -j2 \
     -w /test-results/failed.txt "${tests[@]}" \
     2>&1 | tee /test-results/upstream.txt
 test ! -s /test-results/failed.txt
@@ -38,7 +38,7 @@ test ! -s /test-results/failed.txt
 for name in oom_request_parsing.phpt oom_request_parsing_next_request.phpt \
     oom_shutdown_function_next_request.phpt rfc1867_no_user_code.phpt \
     rfc1867_incomplete_class_reserved_props.phpt; do
-    grep -E "PASS .*${name//./\\.}" /test-results/upstream.txt >/dev/null
+    grep -E "PASS.*${name//./\\.}" /test-results/upstream.txt >/dev/null
 done
 printf 'PHP %s upstream OOM and session lifecycle regression suite passed.\n' "$PHP_VERSION" \
     > /test-results/passed.txt

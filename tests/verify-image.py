@@ -126,7 +126,9 @@ class Lab:
         self.containers = []
         self.volumes = []
         self.password = uuid.uuid4().hex
-        docker('network', 'create', '--internal', self.network)
+        # A private test bridge with HTTP published only on loopback. Docker's
+        # internal networks do not publish host ports on all engine versions.
+        docker('network', 'create', self.network)
 
     def volume(self, suffix):
         name = self.prefix + '-' + suffix
@@ -180,7 +182,7 @@ def multipart(content, extra_headers=b''):
 def apache_security(candidate, lab, inventory):
     print('Testing actual Apache SAPI, multipart OOM, repeated-worker state and Redis/igbinary sessions', flush=True)
     fixtures = lab.evidence / 'http-fixtures'
-    fixtures.mkdir()
+    fixtures.mkdir(exist_ok=True)
     for path in ('index.php', 'early/index.php', 'oom/index.php'):
         target = fixtures / path
         target.parent.mkdir(exist_ok=True)
@@ -213,7 +215,8 @@ php_value session.save_path tcp://redis:6379
     wait_for(lambda: http(url)[0] == 200)
     details = json.loads(http(url)[1])
     require(details['php'] == '8.5.12' and details['sapi'] == 'apache2handler', 'Apache is not using patched PHP')
-    require(details['modules'] == inventory['modules'], 'Apache/CLI module mismatch')
+    # readline is CLI-only; Apache registers its own SAPI module.
+    require(set(details['modules']) - {'apache2handler'} == set(inventory['modules']) - {'readline'}, 'Apache/CLI extension mismatch')
     require(details['memory_limit'] == '1G' and details['upload_max_filesize'] == details['post_max_size'] == '50G', 'Production PHP settings not honored')
     require(details['session_handler'] == 'redis' and details['session_serializer'] == 'igbinary', 'Wrong production session configuration')
     (lab.evidence / 'apache-runtime.json').write_text(json.dumps(details, indent=2) + '\n')
