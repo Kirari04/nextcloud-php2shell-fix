@@ -1,0 +1,42 @@
+{
+  "33.0.10": {
+    "base": "nextcloud@sha256:40cc931e6ca99ae66dbc554170f9e268dc8cd0d7989a5b4536fc1f05be59af3b",
+    "base_id": "sha256:44032d39e9f7a76413e6047be7772d136c4f27897487a111889391d0745cd0b3",
+    "nextcloud_internal": "33.0.10.1",
+    "original_php": "8.4.26",
+    "patched_php": "8.4.27",
+    "php_sha256": "dcf93923b0e38e0d5252b25b796520b5a47761a08b3488b6d0b5d1115764d3f0",
+    "debian_snapshot": "20261021T120000Z",
+    "community": true
+  },
+  "34.0.4": {
+    "base": "nextcloud@sha256:a6281e8046ba1a15bfd4225c8027daee7fd2fff6c593b446f4cd4983a432eef1",
+    "base_id": "sha256:3de31768a5ed5bb14157679c1048465d3f5425347c37c1a9f6ff7207ad1f7e54",
+    "nextcloud_internal": "34.0.4.1",
+    "original_php": "8.5.10",
+    "patched_php": "8.5.12",
+    "php_sha256": "08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209",
+    "debian_snapshot": "20260919T040000Z",
+    "community": false
+  },
+  "34.0.5": {
+    "base": "nextcloud@sha256:c9f5ceb0d2b6b17b4e265d0a96d0969dbb420a7f959b694fb4abd3adc4e3d78e",
+    "base_id": "sha256:57faa39c02923acd9593dfae6a02d9ae062b05818e7f99769986b2af43c05ee3",
+    "nextcloud_internal": "34.0.5.1",
+    "original_php": "8.5.11",
+    "patched_php": "8.5.12",
+    "php_sha256": "08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209",
+    "debian_snapshot": "20261021T120000Z",
+    "community": true
+  },
+  "35.0.2": {
+    "base": "nextcloud@sha256:74165e7aef7e764b36302a5e7231e22e2208b8d3d0674814fbf5d9e18a625335",
+    "base_id": "sha256:22533726ddc5a087e62db3c804cc6445c6d0390e4521f8dc8157d4dced3dd60d",
+    "nextcloud_internal": "35.0.2.2",
+    "original_php": "8.5.11",
+    "patched_php": "8.5.12",
+    "php_sha256": "08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209",
+    "debian_snapshot": "20261021T120000Z",
+    "community": true
+  }
+}

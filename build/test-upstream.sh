@@ -26,7 +26,7 @@ for ext in bcmath curl date dom exif fileinfo filter gd hash iconv intl json lda
         [[ ! -f $test ]] || tests+=("$test")
     done
 done
-args=(-n -d extension_dir=/usr/local/lib/php/extensions/no-debug-non-zts-20250925)
+args=(-n -d "extension_dir=$(php-config --extension-dir)")
 if [[ -f modules/zend_test.so ]]; then
     args+=(-d "extension=$PWD/modules/zend_test.so")
 fi
@@ -37,7 +37,9 @@ test ! -s /test-results/failed.txt
 # Core request-parser and session lifecycle tests must run, not silently skip.
 for name in oom_request_parsing.phpt oom_request_parsing_next_request.phpt \
     oom_shutdown_function_next_request.phpt rfc1867_no_user_code.phpt \
-    rfc1867_incomplete_class_reserved_props.phpt; do
+    rfc1867_incomplete_class_reserved_props.phpt oom_hard_limit_exceeded.phpt \
+    oom_soft_limit_in_callback.phpt oom_filter_default_encoded.phpt \
+    oom_filter_input.phpt oom_filter_input_array.phpt; do
     grep -E "PASS.*${name//./\\.}" /test-results/upstream.txt >/dev/null
 done
 printf 'PHP %s upstream OOM and session lifecycle regression suite passed.\n' "$PHP_VERSION" \

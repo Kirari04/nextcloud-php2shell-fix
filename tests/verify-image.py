@@ -10,17 +10,30 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
 
-BASE = 'nextcloud@sha256:a6281e8046ba1a15bfd4225c8027daee7fd2fff6c593b446f4cd4983a432eef1'
 MYSQL = 'mysql@sha256:6f3a50835c54d61ffdcf78d71381ba268c27804cd96755231d2fd6f180f822f0'
 REDIS = 'redis@sha256:13ad9044b4b2fd2abe4c5aad8c384b0504a71006fa33f023fc68998453a2eeca'
 PECL = {'apcu': '5.1.28', 'igbinary': '3.2.17RC1', 'imagick': '3.8.1', 'memcached': '3.4.0', 'redis': '6.3.0'}
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+from releases import catalog
+
+
+def select_release(release):
+    global BASE, BASE_ID, ORIGINAL_PHP, PATCHED_PHP, NEXTCLOUD_INTERNAL
+    config = catalog()[release]
+    BASE, BASE_ID = config['base'], config['base_id']
+    ORIGINAL_PHP, PATCHED_PHP = config['original_php'], config['patched_php']
+    NEXTCLOUD_INTERNAL = config['nextcloud_internal']
+
+
+select_release('34.0.4')
 
 
 def command(*args, env=None):
@@ -71,7 +84,7 @@ def compare_contract(candidate, evidence):
     print('Comparing exact image contract, PHP extensions, configuration and Nextcloud payload', flush=True)
     original = json.loads(docker('image', 'inspect', BASE))[0]
     patched = json.loads(docker('image', 'inspect', candidate))[0]
-    require(original['Id'] == 'sha256:3de31768a5ed5bb14157679c1048465d3f5425347c37c1a9f6ff7207ad1f7e54', 'Production image ID mismatch')
+    require(original['Id'] == BASE_ID, 'Baseline image ID mismatch')
     require(original['Architecture'] == patched['Architecture'] == 'amd64', 'Architecture mismatch')
     for field in ('Entrypoint', 'Cmd', 'User', 'WorkingDir', 'Volumes', 'ExposedPorts', 'StopSignal'):
         require(original['Config'].get(field) == patched['Config'].get(field), f'Changed image contract: {field}')
@@ -107,8 +120,8 @@ def compare_contract(candidate, evidence):
             require(packages == original_packages, 'OS packages changed')
     require(hashes[0] == hashes[1], 'Nextcloud payload or configuration changed')
     before, after = inventories
-    require(before['php'] == '8.5.10' and after['php'] == '8.5.12', 'Wrong PHP versions')
-    require(before['nextcloud'] == after['nextcloud'] == '34.0.4.1', 'Nextcloud changed')
+    require(before['php'] == ORIGINAL_PHP and after['php'] == PATCHED_PHP, 'Wrong PHP versions')
+    require(before['nextcloud'] == after['nextcloud'] == NEXTCLOUD_INTERNAL, 'Nextcloud changed')
     require(before['modules'] == after['modules'], 'PHP module set changed')
     require(before['pecl'] == after['pecl'] == PECL, 'PECL version mismatch')
     ini_changes = {key: [value, after['ini'].get(key)] for key, value in before['ini'].items() if after['ini'].get(key) != value}
@@ -222,7 +235,7 @@ php_value session.save_path tcp://redis:6379
     url = lab.url(container)
     wait_for(lambda: http(url)[0] == 200)
     details = json.loads(http(url)[1])
-    require(details['php'] == '8.5.12' and details['sapi'] == 'apache2handler', 'Apache is not using patched PHP')
+    require(details['php'] == PATCHED_PHP and details['sapi'] == 'apache2handler', 'Apache is not using patched PHP')
     # readline is CLI-only; Apache registers its own SAPI module.
     require(set(details['modules']) - {'apache2handler'} == set(inventory['modules']) - {'readline'}, 'Apache/CLI extension mismatch')
     require(details['memory_limit'] == '1G' and details['upload_max_filesize'] == details['post_max_size'] == '50G', 'Production PHP settings not honored')
@@ -255,7 +268,7 @@ php_value session.save_path tcp://redis:6379
         status, _, _ = http(url + '/oom/index.php', data=body, headers=headers)
         require(status == 500, f'OOM trigger was not rejected: HTTP {status}')
         status, response, _ = http(url + '/')
-        require(status == 200 and json.loads(response)['php'] == '8.5.12', 'Normal request failed after OOM')
+        require(status == 200 and json.loads(response)['php'] == PATCHED_PHP, 'Normal request failed after OOM')
     logs_result = subprocess.run(['docker', 'logs', container], capture_output=True, text=True)
     logs = logs_result.stdout + logs_result.stderr
     require('Allowed memory size' in logs, 'No evidence of OOM trigger')
@@ -291,9 +304,9 @@ def persistence(candidate, lab, mysql):
             return data if data.get('installed') and not data.get('maintenance') and not data.get('needsDbUpgrade') else False
 
         state = wait_for(healthy, timeout=360)
-        require(state['version'] == '34.0.4.1', 'Application version changed')
+        require(state['version'] == NEXTCLOUD_INTERNAL, 'Application version changed')
         php_version = docker('exec', container, 'php', '-r', 'echo PHP_VERSION;')
-        require(php_version == ('8.5.12' if phase == 'patched' else '8.5.10'), 'Unexpected runtime in persistence phase')
+        require(php_version == (PATCHED_PHP if phase == 'patched' else ORIGINAL_PHP), 'Unexpected runtime in persistence phase')
         # The real production healthcheck is unchanged.
         docker('exec', container, 'sh', '-c', '''curl -sSf http://127.0.0.1/status.php | grep '"installed":true' | grep '"maintenance":false' | grep '"needsDbUpgrade":false' ''')
         docker('exec', '-u', 'www-data', container, 'php', '-f', '/var/www/html/cron.php')
@@ -353,8 +366,10 @@ def persistence(candidate, lab, mysql):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('image')
+    parser.add_argument('--release', choices=list(catalog()), default='34.0.4')
     parser.add_argument('--evidence-dir', type=Path, required=True)
     args = parser.parse_args()
+    select_release(args.release)
     evidence = args.evidence_dir.resolve()
     evidence.mkdir(parents=True, exist_ok=True)
     for image in (BASE, MYSQL, REDIS):
@@ -371,7 +386,7 @@ def main():
         apache_security(args.image, lab, inventory)
         persistence(args.image, lab, mysql)
         (evidence / 'passed.json').write_text(json.dumps({'image': args.image, 'baseline': BASE, 'mysql': MYSQL,
-            'redis': REDIS, 'php': '8.5.12', 'nextcloud': '34.0.4.1', 'architecture': 'amd64', 'passed': True}, indent=2) + '\n')
+            'redis': REDIS, 'php': PATCHED_PHP, 'nextcloud': NEXTCLOUD_INTERNAL, 'architecture': 'amd64', 'passed': True}, indent=2) + '\n')
         print('PASS: patched Apache/CLI, unchanged image contract, security regressions, MySQL/Redis and official roundtrip', flush=True)
     finally:
         lab.close()

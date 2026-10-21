@@ -2,6 +2,10 @@
 
 Temporary drop-in replacement for **Nextcloud 34.0.4 (34.0.4.1), Apache, linux/amd64**, rebuilding PHP **8.5.10 → 8.5.12** to fix **CVE-2026-109618 and CVE-2026-109619**. Builds and publication run in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions).
 
+**Match the image to your data volume's exact Nextcloud version.** If startup reports data `34.0.5.1` and image `34.0.4.1`, use the 34.0.5 replacement once published. Do not change `version.php`, force a downgrade, or use a different application version to bypass this check.
+
+The build catalog also supports community releases **33.0.10 / PHP 8.4.27**, **34.0.5 / PHP 8.5.12**, and **35.0.2 / PHP 8.5.12**, all Apache/linux-amd64. Each is built from its own pinned official image and must pass its own security and persistence tests before publication. Their publication references will be listed here after successful verification. FPM, Alpine and other CPU architectures are not included.
+
 **Published publicly and verified on 21 October 2026.** No registry login is required.
 
 ```text
@@ -72,9 +76,11 @@ The isolated compatibility test switches back to the original 34.0.4 image solel
 
 Run the **Build, verify and publish patched Nextcloud** workflow with `publish=false` for validation or `publish=true` to publish after all checks pass. The workflow needs only its scoped `GITHUB_TOKEN` (`contents:read`, `packages:write`); it has no production credentials.
 
+Select an exact `release`, `community` for the three additional releases, or `all` to include 34.0.4. Each matrix job publishes only after its own gates pass. Release tags are `<Nextcloud>-php<PHP>` and `<Nextcloud>-apache`, with an additional source-revision tag. There is no floating `stable` or `latest` alias that could silently upgrade the application. Existing 34.0.4 publication is unchanged by the community run.
+
 The GHCR package must be **Public** in its [package settings](https://github.com/users/Kirari04/packages/container/nextcloud-php2shell-fix/settings), independently of this public repository. The first publication waits up to five minutes for that setting. A credential-free pull of the published digest must pass before the workflow reports a successful public release.
 
-The Dockerfile pins the production manifest. Build headers come from the corresponding Debian snapshot; the build fails if installing them changes any existing runtime package. PHP source is checked against the pinned php.net SHA-256 and a detached signature using the original official image's pinned PHP signing keys. PECL archive checksums are pinned too. The final image inherits the original OS libraries; linker checks and runtime tests guard against missing dependencies.
+The validated `releases.json` catalog pins each official manifest, image ID, application/runtime version, PHP checksum and Debian snapshot; Dockerfile defaults retain the original 34.0.4 baseline. Build headers come from the corresponding Debian snapshot; the build fails if installing them changes any existing runtime package. PHP source is checked against the pinned php.net SHA-256 and a detached signature using the original official image's pinned PHP signing keys. PECL archive checksums are pinned too. The final image inherits the original OS libraries; linker checks and runtime tests guard against missing dependencies.
 
 Verification gates:
 

@@ -3,6 +3,18 @@ name: Build, verify and publish patched Nextcloud
 on:
   workflow_dispatch:
     inputs:
+      release:
+        description: Exact Nextcloud release (community builds all three additional releases)
+        required: true
+        default: community
+        type: choice
+        options:
+          - community
+          - all
+          - 33.0.10
+          - 34.0.4
+          - 34.0.5
+          - 35.0.2
       publish:
         description: Publish the verified image to GHCR
         required: true
@@ -17,7 +29,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      variants: ${{ steps.select.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: select
+        env:
+          RELEASE_SET: ${{ inputs.release }}
+        run: python3 scripts/releases.py matrix "$RELEASE_SET" >> "$GITHUB_OUTPUT"
   image:
+    needs: matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.variants) }}
+    name: Nextcloud ${{ matrix.release }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -26,8 +53,11 @@ jobs:
     env:
       IMAGE: ghcr.io/kirari04/nextcloud-php2shell-fix
       LOCAL_IMAGE: nextcloud-php2shell:verified
+      RELEASE: ${{ matrix.release }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Select pinned release
+        run: python3 scripts/releases.py env "$RELEASE" >> "$GITHUB_ENV"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Expose Actions cache credentials to Buildx shell steps
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -42,25 +72,30 @@ jobs:
       - name: Syntax checks
         run: |
           bash -n build/*.sh scripts/*.sh
-          python3 -m py_compile tests/verify-image.py
+          python3 -m py_compile tests/verify-image.py scripts/releases.py
           git diff --check
           mkdir -p "$RUNNER_TEMP/evidence"
       - name: Build and cache patched PHP and extensions
         run: |
           set -o pipefail
           docker buildx build --platform linux/amd64 --target build \
-            --cache-from type=gha,version=2,scope=nextcloud-php2shell-build \
-            --cache-to type=gha,version=2,mode=max,scope=nextcloud-php2shell-build \
+            --build-arg BASE_IMAGE --build-arg EXPECTED_ORIGINAL_PHP --build-arg PATCHED_PHP \
+            --build-arg PHP_SOURCE_SHA256 --build-arg DEBIAN_SNAPSHOT \
+            --cache-from "type=gha,version=2,scope=nextcloud-php2shell-build-$RELEASE" \
+            --cache-to "type=gha,version=2,mode=max,scope=nextcloud-php2shell-build-$RELEASE" \
             --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/php-build.log"
       - name: Build patched runtime and run upstream security regressions
         run: |
           set -o pipefail
           docker buildx build --platform linux/amd64 --target runtime --load \
+            --build-arg BASE_IMAGE --build-arg BASE_DIGEST --build-arg EXPECTED_ORIGINAL_PHP \
+            --build-arg PATCHED_PHP --build-arg PHP_SOURCE_SHA256 --build-arg DEBIAN_SNAPSHOT \
+            --build-arg RELEASE_VERSION --build-arg EXPECTED_NEXTCLOUD_VERSION \
             --tag "$LOCAL_IMAGE" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            --cache-from type=gha,version=2,scope=nextcloud-php2shell-build \
-            --cache-from type=gha,version=2,scope=nextcloud-php2shell \
-            --cache-to type=gha,version=2,mode=max,scope=nextcloud-php2shell \
+            --cache-from "type=gha,version=2,scope=nextcloud-php2shell-build-$RELEASE" \
+            --cache-from "type=gha,version=2,scope=nextcloud-php2shell-$RELEASE" \
+            --cache-to "type=gha,version=2,mode=max,scope=nextcloud-php2shell-$RELEASE" \
             --progress plain . 2>&1 | tee "$RUNNER_TEMP/evidence/build.log"
           id=$(docker create "$LOCAL_IMAGE")
           docker cp "$id:/usr/local/share/php2shell/upstream" "$RUNNER_TEMP/evidence/upstream"
@@ -68,7 +103,7 @@ jobs:
       - name: Verify image contract, Apache security and persistent volume roundtrip
         run: |
           set -o pipefail
-          python3 tests/verify-image.py "$LOCAL_IMAGE" --evidence-dir "$RUNNER_TEMP/evidence/integration" \
+          python3 tests/verify-image.py "$LOCAL_IMAGE" --release "$RELEASE_VERSION" --evidence-dir "$RUNNER_TEMP/evidence/integration" \
             2>&1 | tee "$RUNNER_TEMP/evidence/integration.log"
       - name: Log in to GHCR
         if: inputs.publish
@@ -81,7 +116,7 @@ jobs:
         if: inputs.publish
         run: |
           set -euo pipefail
-          tag="34.0.4-php8.5.12-${GITHUB_SHA:0:12}"
+          tag="$RELEASE_VERSION-php$PATCHED_PHP-${GITHUB_SHA:0:12}"
           tested_id=$(docker image inspect "$LOCAL_IMAGE" --format '{{.Id}}')
           docker tag "$LOCAL_IMAGE" "$IMAGE:$tag"
           docker push "$IMAGE:$tag"
@@ -89,9 +124,11 @@ jobs:
           test -n "$digest"
           docker pull "$IMAGE@$digest"
           test "$(docker image inspect "$IMAGE@$digest" --format '{{.Id}}')" = "$tested_id"
-          docker run --rm --entrypoint php "$IMAGE@$digest" -r 'if (PHP_VERSION !== "8.5.12") exit(1); echo PHP_VERSION, PHP_EOL;'
-          docker tag "$LOCAL_IMAGE" "$IMAGE:34.0.4-php8.5.12"
-          docker push "$IMAGE:34.0.4-php8.5.12"
+          docker run --rm --entrypoint php "$IMAGE@$digest" -r 'if (PHP_VERSION !== $argv[1]) exit(1); echo PHP_VERSION, PHP_EOL;' "$PATCHED_PHP"
+          for alias in "$RELEASE_VERSION-php$PATCHED_PHP" "$RELEASE_VERSION-apache"; do
+            docker tag "$LOCAL_IMAGE" "$IMAGE:$alias"
+            docker push "$IMAGE:$alias"
+          done
           printf '%s\n' "$IMAGE@$digest" | tee "$RUNNER_TEMP/evidence/published-image.txt"
       - name: Verify public pull without credentials
         if: inputs.publish
@@ -113,12 +150,12 @@ jobs:
           done
           test "$public" = true
           printf 'Anonymous pull passed: %s\n' "$reference" | tee "$RUNNER_TEMP/evidence/public-pull.txt"
-          printf 'Verified and publicly available: `%s`\n\nNextcloud 34.0.4; PHP 8.5.12; linux/amd64.\n' "$reference" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Verified and publicly available: `%s`\n\nNextcloud %s; PHP %s; linux/amd64.\n' "$reference" "$RELEASE_VERSION" "$PATCHED_PHP" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: verification-${{ github.sha }}-${{ github.run_attempt }}
+          name: verification-${{ matrix.release }}-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/evidence
           retention-days: 30
           if-no-files-found: error

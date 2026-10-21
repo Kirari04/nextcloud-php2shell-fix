@@ -2,7 +2,7 @@
 set -euo pipefail
 
 test "$(dpkg --print-architecture)" = amd64
-test "$(php -r 'echo PHP_VERSION;')" = 8.5.10
+test "$(php -r 'echo PHP_VERSION;')" = "$EXPECTED_ORIGINAL_PHP"
 mkdir -p /build/downloads
 dpkg-query -W -f='${binary:Package}\t${Version}\n' | sort > /build/original-packages.tsv
 php-config --configure-options > /build/original-configure.txt
@@ -11,8 +11,8 @@ tar -cpf /build/php-config.tar -C /usr/local/etc/php .
 # Headers are taken from the baseline's publication date. The assertion below
 # rejects any upgrade of an existing runtime package in the builder.
 sed -i \
-    -e 's|http://deb.debian.org/debian-security|https://snapshot.debian.org/archive/debian-security/20260919T040000Z|' \
-    -e 's|http://deb.debian.org/debian|https://snapshot.debian.org/archive/debian/20260919T040000Z|' \
+    -e "s|http://deb.debian.org/debian-security|https://snapshot.debian.org/archive/debian-security/$DEBIAN_SNAPSHOT|" \
+    -e "s|http://deb.debian.org/debian|https://snapshot.debian.org/archive/debian/$DEBIAN_SNAPSHOT|" \
     /etc/apt/sources.list.d/debian.sources
 apt-get -o Acquire::Check-Valid-Until=false update
 apt-get install -y --no-install-recommends \
