@@ -1,12 +1,31 @@
 # nextcloud-php2shell-fix
 
-Community-built, temporary replacements for the official **Nextcloud Apache image on linux/amd64**, addressing **PHP2Shell: CVE-2026-109618 and CVE-2026-109619**.
+> [!IMPORTANT]
+> **Retired on 21 October 2026: patched official Nextcloud images are available for 33.0.10, 34.0.5 and 35.0.2. Use the official images below.**
+>
+> This repository and its community images are no longer maintained. The source, image references and build evidence are retained as a historical record.
 
-Each image preserves its official baseline's exact Nextcloud version and rebuilds PHP CLI, Apache's PHP module and extensions from the patched upstream release in the same PHP minor branch. PHP identifies **8.4.27 and 8.5.12** as fixed releases in its [security advisory](https://www.php.net/archive/2026.php#2026-10-21-5).
+This project provided temporary community replacements for the official **Nextcloud Apache image on linux/amd64**, addressing **PHP2Shell: CVE-2026-109618 and CVE-2026-109619** while official images were being rebuilt.
 
-Use these images as a bridge until an official image with the same Nextcloud version and patched PHP is available. Source, tests and publication are visible in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/workflows/publish.yml).
+Each temporary image preserved its baseline's exact Nextcloud version and rebuilt PHP CLI, Apache's PHP module and extensions in the same PHP minor branch. The original build, test and publication records remain visible in [GitHub Actions](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/workflows/publish.yml).
 
-## Published images
+## Patched official images
+
+Checked on **21 October 2026 at 18:43 UTC**, using [`scripts/check-official.sh`](scripts/check-official.sh) on an isolated **linux/amd64** Docker host. The following images passed exact Nextcloud-version checks and reported patched PHP in **both CLI and Apache over HTTP**:
+
+| Official tag | Nextcloud version | PHP | Verified official digest |
+| --- | --- | --- | --- |
+| `nextcloud:33.0.10-apache` | 33.0.10.1 | 8.4.27 | `nextcloud@sha256:ca04a99f5a081030dd6c494bdfbb1cbc2bf3e2e10c0f9fcdc3be031ac3803f77` |
+| `nextcloud:34.0.5-apache` | 34.0.5.1 | 8.5.12 | `nextcloud@sha256:5cd0788a5c7e0374256939dd86fefa34160ae03730cb28246d16939eacfd4c08` |
+| `nextcloud:35.0.2-apache` | 35.0.2.2 | 8.5.12 | `nextcloud@sha256:3f05f4d5eded9d3d029e617926500645cca6344710364737a374088f6811095a` |
+
+At the same check, **`nextcloud:stable` resolved to the verified 34.0.5 image above**, with the same registry digest and amd64 image ID. It can be used for a 34.0.5 installation, but future pulls of a floating tag can select a newer Nextcloud version. Pin the exact version or digest when that matters.
+
+**34.0.4 exception:** `nextcloud:34.0.4-apache` still reported PHP 8.5.11 and failed the return checker. A move from 34.0.4 to 34.0.5 is a separate Nextcloud application upgrade; it is not a same-version image replacement. The archived 34.0.4 workaround will not receive further security updates.
+
+These official-image checks were run locally with the included checker. The Actions links below document the earlier community builds. See [Return to an official image](#return-to-an-official-image) for switching instructions. PHP's [security advisory](https://www.php.net/archive/2026.php#2026-10-21-5) identifies 8.4.27 and 8.5.12 as fixed releases.
+
+## Published community images (historical)
 
 Published and verified on **21 October 2026**. All listed images are publicly pullable without a registry login. Supported variant: **Apache, linux/amd64**. FPM, Alpine and other architectures are outside this release set.
 
@@ -19,7 +38,7 @@ Image namespace: `ghcr.io/kirari04/nextcloud-php2shell-fix`. Append `:<tag>` or 
 | 34.0.5.1 | `34.0.5-php8.5.12` | `sha256:d9a2f414ba48026c156bff8f605f8ea01918fd0b424760caa6924f2234206bbb` | [Passed; 180 upstream tests](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/job/119341533507) |
 | 35.0.2.2 | `35.0.2-php8.5.12` | `sha256:a41bcec44fe4eea23c7026e2b0af756c3894bb07429ae6d177c5e9fff89f44d9` | [Passed; 180 upstream tests](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/runs/39634559417/job/119341533779) |
 
-The `33.0.10-apache`, `34.0.5-apache` and `35.0.2-apache` aliases resolve to the same respective images. Revision tags additionally include the first 12 characters of the source commit. Pin the **digest** to use the exact verified image. There are no floating `stable` or `latest` aliases.
+The `33.0.10-apache`, `34.0.5-apache` and `35.0.2-apache` aliases resolve to the same respective community images. Revision tags additionally include the first 12 characters of the source commit. These references are retained for existing users and audit purposes; use the patched official images above for ongoing operation.
 
 ## Build and publication evidence
 
@@ -68,7 +87,9 @@ The linked jobs verify:
 
 Integration tests use pinned **MySQL 8.4.11** and **Redis 8.10.2** images; exact versions are recorded in `integration/dependencies.txt`. Coverage uses disposable fixtures rather than a copy of every installation's apps and data. The PHP tests are a focused suite. Upload tests check the 50 GiB configuration values while transferring small fixtures; they do not exercise a 50 GiB transfer or production concurrency.
 
-## Switch an existing installation
+## Historical community-image installation instructions
+
+The following instructions describe installation of the retired workaround. For current use, follow [Return to an official image](#return-to-an-official-image).
 
 **Choose the exact Nextcloud version already installed.** These images patch PHP without requiring an application/database upgrade. Check the Nextcloud administration page or run the following against the existing Compose service, replacing `nextcloud` if the service has another name:
 
@@ -114,15 +135,32 @@ From a clone of this repository, check the candidate on a test machine with Dock
 bash scripts/check-official.sh nextcloud:34.0.5-apache 34.0.5
 ```
 
-Set both version arguments for the release being checked. The script checks architecture, exact Nextcloud version, CLI PHP and Apache PHP over HTTP using an isolated probe. When it passes, use the printed official digest in `image:` and repeat the same Compose pull/recreate commands, retaining the existing configuration, database and volumes.
+Set both version arguments for the release being checked. The script checks architecture, exact Nextcloud version, CLI PHP and Apache PHP over HTTP using an isolated probe. The three official images in the table above have passed these checks.
 
-Floating official tags such as `stable` can advance to a newer Nextcloud version. A move to a newer application version is a separate Nextcloud upgrade. The official `33.0.10-apache`, `34.0.4-apache`, `34.0.5-apache` and `35.0.2-apache` tags were checked on **21 October 2026** and rejected by the return checker because they still contained unpatched PHP. Recheck the candidate before returning.
+For example, an installation using the community **34.0.5** image can change its existing image field to:
+
+```yaml
+image: nextcloud:34.0.5-apache
+```
+
+The exact verified reference is `nextcloud@sha256:5cd0788a5c7e0374256939dd86fefa34160ae03730cb28246d16939eacfd4c08`. `nextcloud:stable` also matched this image at the check above; it can advance on later pulls.
+
+Keep the existing configuration, database, Redis, volumes, networks and healthcheck, then recreate only the Nextcloud service:
+
+```bash
+docker compose pull nextcloud
+docker compose up -d --no-deps --force-recreate nextcloud
+docker compose exec -T nextcloud php -v
+docker compose exec -T nextcloud curl -fsS http://127.0.0.1/status.php
+```
+
+For the 34.0.5 example, expect PHP 8.5.12 and Nextcloud 34.0.5.1 with `installed:true`, `maintenance:false` and `needsDbUpgrade:false`. No data migration or configuration change is part of this same-version replacement. Recheck tags and the installed version before switching; a move to a newer application version is a separate Nextcloud upgrade.
 
 The old official images used in compatibility roundtrips contain vulnerable PHP; those tests establish persistence compatibility rather than a safe production rollback target.
 
-## Build and verify
+## Historical build and verification process
 
-The [manual Actions workflow](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/workflows/publish.yml) accepts an exact `release`, `community` for 33.0.10/34.0.5/35.0.2, or `all` for all four releases. Use `publish=false` to validate or `publish=true` to publish each release after its tests pass. Publishing uses scoped `GITHUB_TOKEN` permissions (`contents:read`, `packages:write`); the workflow has no deployment credentials or deployment step. A public pull must pass before a successful public release is reported.
+The [manual Actions workflow](https://github.com/Kirari04/nextcloud-php2shell-fix/actions/workflows/publish.yml) accepted an exact `release`, `community` for 33.0.10/34.0.5/35.0.2, or `all` for all four releases. Each release was published only after its tests passed, using scoped `GITHUB_TOKEN` permissions (`contents:read`, `packages:write`). A public pull was required before reporting a successful public release. The workflow had no deployment credentials or deployment step. No further builds or releases are planned for this archived project.
 
 For local validation of the Dockerfile's default **34.0.4** variant:
 
