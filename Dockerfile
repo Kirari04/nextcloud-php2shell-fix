@@ -8,11 +8,12 @@ ENV PHP_VERSION=8.5.12 \
     PHP_URL=https://www.php.net/distributions/php-8.5.12.tar.xz \
     PHP_ASC_URL=https://www.php.net/distributions/php-8.5.12.tar.xz.asc \
     PHP_SHA256=08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209
-COPY build/ /build/
+COPY build/rebuild-php.sh build/pecl.sha256 /build/
 RUN bash /build/rebuild-php.sh
 
 # Test-only CGI and zend_test never enter the published image.
 FROM build AS regression
+COPY build/test-upstream.sh /build/test-upstream.sh
 RUN bash /build/test-upstream.sh
 
 FROM original AS runtime
